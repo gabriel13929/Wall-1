@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WALLPIX - Plataforma de Wallpapers</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel para compilar JSX no navegador -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      @layer utilities {
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+      const { 
+        Camera, Shield, Lock, Unlock, Upload, Settings, DollarSign, 
+        Layout, Users, BarChart2, ShoppingBag, Eye, Trash2, Edit3, 
+        Plus, Check, Copy, AlertTriangle, RefreshCw, Smartphone, Monitor, 
+        Grid, List, ChevronRight, ArrowLeft, Download, Star, Search, 
+        Menu, X, Key, UserCheck, HelpCircle, FileText, CheckCircle2, 
+        Clock, XCircle, Sliders, Image: ImageIcon, Sparkles, LogOut
+      } = lucicadeReact || window.LucideIcons || {
+        Camera: () => <span>📷</span>, Shield: () => <span>🛡️</span>, Lock: () => <span>🔒</span>, Unlock: () => <span>🔓</span>, Upload: () => <span>📤</span>, Settings: () => <span>⚙️</span>, DollarSign: () => <span>💲</span>, Layout: () => <span>📐</span>, Users: () => <span>👥</span>, BarChart2: () => <span>📊</span>, ShoppingBag: () => <span>🛍️</span>, Eye: () => <span>👁️</span>, Trash2: () => <span>🗑️</span>, Edit3: () => <span>✏️</span>, Plus: () => <span>➕</span>, Check: () => <span>✔️</span>, Copy: () => <span>📋</span>, AlertTriangle: () => <span>⚠️</span>, RefreshCw: () => <span>🔄</span>, Smartphone: () => <span>📱</span>, Monitor: () => <span>💻</span>, Grid: () => <span>🔲</span>, List: () => <span>📋</span>, ChevronRight: () => <span>➡️</span>, ArrowLeft: () => <span>⬅️</span>, Download: () => <span>📥</span>, Star: () => <span>⭐</span>, Search: () => <span>🔍</span>, Menu: () => <span>☰</span>, X: () => <span>❌</span>, Key: () => <span>🔑</span>, UserCheck: () => <span>✅</span>, HelpCircle: () => <span>❓</span>, FileText: () => <span>📄</span>, CheckCircle2: () => <span>✅</span>, Clock: () => <span>🕒</span>, XCircle: () => <span>⛔</span>, Sliders: () => <span>🎚️</span>, ImageIcon: () => <span>🖼️</span>, Sparkles: () => <span>✨</span>, LogOut: () => <span>🚪</span>
+      };
+
+      // --- INITIAL CATEGORIES (13 categories specified) ---
+      const INITIAL_CATEGORIES = [
+        { id: 'cat-1', name: 'Carros', slug: 'carros' },
+        { id: 'cat-2', name: 'Pessoas', slug: 'pessoas' },
+        { id: 'cat-3', name: 'Anime', slug: 'anime' },
+        { id: 'cat-4', name: 'Games', slug: 'games' },
+        { id: 'cat-5', name: 'Minecraft', slug: 'minecraft' },
+        { id: 'cat-6', name: 'GTA', slug: 'gta' },
+        { id: 'cat-7', name: 'Paisagens', slug: 'paisagens' },
+        { id: 'cat-8', name: 'Espaço', slug: 'espaco' },
+        { id: 'cat-9', name: 'Tecnologia', slug: 'tecnologia' },
+        { id: 'cat-10', name: 'Motos', slug: 'motos' },
+        { id: 'cat-11', name: 'Minimalistas', slug: 'minimalistas' },
+        { id: 'cat-12', name: '3D', slug: '3d' },
+        { id: 'cat-13', name: 'Wallpapers animados', slug: 'wallpapers-animados' }
+      ];
+
+      function App() {
+        const [wallpapers, setWallpapers] = useState([]);
+        const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+        const [users, setUsers] = useState([
+          { id: 'u1', name: 'Cliente Teste', email: 'cliente@wallpix.com', role: 'user', purchases: [] }
+        ]);
+        const [salesHistory, setSalesHistory] = useState([]);
+        const [paymentHistory, setPaymentHistory] = useState([]);
+        
+        const [pixConfig, setPixConfig] = useState({
+          keyType: 'cpf',
+          pixKey: '123.456.789-00',
+          receiverName: 'BielShadow Store',
+          mercadoPagoToken: 'APP_USR-test-token-123456',
+          status: 'active'
+        });
+
+        const [protectionConfig, setProtectionConfig] = useState({
+          gridIntensity: 'medium',
+          gridPattern: 'diagonal',
+          watermarkText: 'WALLPIX',
+          watermarkOpacity: 0.3,
+          watermarkPosition: 'center'
+        });
+
+        const [layoutSettings, setLayoutSettings] = useState({
+          columns: 3,
+          showBanner: true,
+          bannerTitle: 'Transforme sua Tela com Wallpapers Exclusivos',
+          bannerSubtitle: 'Qualidade Ultra HD e 4K com suporte a Computador e Celular.',
+          featuredSection: true
+        });
+
+        const [previewDeviceMode, setPreviewDeviceMode] = useState('mobile');
+        const [currentView, setCurrentView] = useState('home');
+        const [currentUser, setCurrentUser] = useState(null); 
+        const [selectedCategory, setSelectedCategory] = useState('all');
+        const [searchQuery, setSearchQuery] = useState('');
+        const [activeWallpaper, setActiveWallpaper] = useState(null); 
+        const [checkoutStep, setCheckoutStep] = useState('summary'); 
+        const [notification, setNotification] = useState(null);
+        const [adminTab, setAdminTab] = useState('dashboard');
+        const [activeOrder, setActiveOrder] = useState(null);
+
+        useEffect(() => {
+          const loadedWallpapers = localStorage.getItem('wallpix_wallpapers');
+          const loadedCategories = localStorage.getItem('wallpix_categories');
+          const loadedPix = localStorage.getItem('wallpix_pix_config');
+          const loadedProtection = localStorage.getItem('wallpix_protection');
+          const loadedLayout = localStorage.getItem('wallpix_layout');
+          const loadedSales = localStorage.getItem('wallpix_sales');
+          const loadedPayments = localStorage.getItem('wallpix_payments');
+          const loadedUsers = localStorage.getItem('wallpix_users');
+
+          if (loadedWallpapers) setWallpapers(JSON.parse(loadedWallpapers));
+          if (loadedCategories) setCategories(JSON.parse(loadedCategories));
+          if (loadedPix) setPixConfig(JSON.parse(loadedPix));
+          if (loadedProtection) setProtectionConfig(JSON.parse(loadedProtection));
+          if (loadedLayout) setLayoutSettings(JSON.parse(loadedLayout));
+          if (loadedSales) setSalesHistory(JSON.parse(loadedSales));
+          if (loadedPayments) setPaymentHistory(JSON.parse(loadedPayments));
+          if (loadedUsers) setUsers(JSON.parse(loadedUsers));
+        }, []);
+
+        const saveToStorage = (key, data) => {
+          localStorage.setItem(key, JSON.stringify(data));
+        };
+
+        const showNotification = (message, type = 'success') => {
+          setNotification({ message, type });
+          setTimeout(() => setNotification(null), 4000);
+        };
+
+        const handleSavePixConfig = (newConfig) => {
+          setPixConfig(newConfig);
+          saveToStorage('wallpix_pix_config', newConfig);
+          showNotification('Configurações do Pix salvas com sucesso!');
+        };
+
+        const handleSaveProtection = (newProt) => {
+          setProtectionConfig(newProt);
+          saveToStorage('wallpix_protection', newProt);
+          showNotification('Configurações de proteção atualizadas!');
+        };
+
+        const handleSaveLayout = (newLayout) => {
+          setLayoutSettings(newLayout);
+          saveToStorage('wallpix_layout', newLayout);
+          showNotification('Layout visual atualizado com sucesso!');
+        };
+
+        const handleAddCategory = (catName) => {
+          if (!catName.trim()) return;
+          const slug = catName.toLowerCase().replace(/\s+/g, '-');
+          if (categories.some(c => c.slug === slug)) {
+            showNotification('Esta categoria já existe!', 'error');
+            return;
+          }
+          const newCat = { id: 'cat-' + Date.now(), name: catName, slug };
+          const updated = [...categories, newCat];
+          setCategories(updated);
+          saveToStorage('wallpix_categories', updated);
+          showNotification(`Categoria "${catName}" criada com sucesso!`);
+        };
+
+        const handleDeleteCategory = (catId) => {
+          const updated = categories.filter(c => c.id !== catId);
+          setCategories(updated);
+          saveToStorage('wallpix_categories', updated);
+          showNotification('Categoria removida.');
+        };
+
+        const handleAddWallpaper = (wallpaperData) => {
+          const updated = [wallpaperData, ...wallpapers];
+          setWallpapers(updated);
+          saveToStorage('wallpix_wallpapers', updated);
+          showNotification('Wallpaper adicionado com sucesso ao catálogo!');
+        };
+
+        const handleDeleteWallpaper = (id) => {
+          const updated = wallpapers.filter(w => w.id !== id);
+          setWallpapers(updated);
+          saveToStorage('wallpix_wallpapers', updated);
+          showNotification('Wallpaper excluído.');
+        };
+
+        const initiateCheckout = (wallpaper) => {
+          if (!currentUser) {
+            showNotification('Por favor, faça login para continuar.', 'error');
+            setCurrentView('login');
+            return;
+          }
+          if (!wallpaper.isPremium) {
+            triggerDownload(wallpaper, previewDeviceMode);
+            return;
+          }
+
+          const order = {
+            id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
+            wallpaperId: wallpaper.id,
+            title: wallpaper.title,
+            price: wallpaper.price || 9.90,
+            userEmail: currentUser.email,
+            status: 'pending',
+            qrCodeString: `00020126580014br.gov.bcb.pix0136${pixConfig.pixKey}5204000053039865802BR5925${pixConfig.receiverName}6009SAO PAULO62070503***63041D3D`,
+            createdAt: new Date().toISOString()
+          };
+
+          setActiveOrder(order);
+          setCheckoutStep('qr');
+          setCurrentView('checkout');
+        };
+
+        const simulateWebhookApproval = () => {
+          if (!activeOrder) return;
+          const approvedOrder = { ...activeOrder, status: 'approved' };
+          setActiveOrder(approvedOrder);
+          setCheckoutStep('success');
+
+          const newSale = {
+            id: approvedOrder.id,
+            title: approvedOrder.title,
+            amount: approvedOrder.price,
+            user: currentUser.email,
+            date: new Date().toLocaleString(),
+            status: 'Aprovado'
+          };
+          const newPayment = {
+            id: 'PAY-' + Math.random().toString(36).substr(2, 9),
+            orderId: approvedOrder.id,
+            method: 'Pix Mercado Pago',
+            amount: approvedOrder.price,
+            status: 'Confirmado via Webhook'
+          };
+
+          const updatedSales = [newSale, ...salesHistory];
+          const updatedPayments = [newPayment, ...paymentHistory];
+
+          setSalesHistory(updatedSales);
+          setPaymentHistory(updatedPayments);
+          saveToStorage('wallpix_sales', updatedSales);
+          saveToStorage('wallpix_payments', updatedPayments);
+
+          const userPurchases = currentUser.purchases || [];
+          const updatedUser = { ...currentUser, purchases: [...userPurchases, activeOrder.wallpaperId] };
+          setCurrentUser(updatedUser);
+          
+          showNotification('Pagamento confirmado via Webhook com sucesso!');
+        };
+
+        const triggerDownload = (wallpaper, format = 'mobile') => {
+          const link = document.createElement('a');
+          link.href = wallpaper.url;
+          link.download = `${wallpaper.title.toLowerCase().replace(/\s+/g, '-')}-${format}-wallpix.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showNotification(`Download (${format === 'pc' ? 'Computador 16:9' : 'Celular 9:16'}) iniciado!`);
+        };
+
+        return (
+          <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-20">
+            {notification && (
+              <div className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border backdrop-blur-md ${
+                notification.type === 'error' ? 'bg-red-950/80 border-red-500 text-red-200' : 'bg-emerald-950/80 border-emerald-500 text-emerald-200'
+              }`}>
+                <span className="font-medium text-sm">{notification.message}</span>
+              </div>
+            )}
+
+            <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-xl border-b border-slate-800">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+                <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setCurrentView('home'); setActiveWallpaper(null); }}>
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    ✨
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-black tracking-wider bg-gradient-to-r from-white via-indigo-200 to-indigo-400 bg-clip-text text-transparent">WALLPIX</h1>
+                    <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-semibold">Exclusivo & Ultra HD</p>
+                  </div>
+                </div>
+
+                <div className="hidden lg:flex items-center bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+                  <button 
+                    onClick={() => setPreviewDeviceMode('mobile')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${previewDeviceMode === 'mobile' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    📱 Celular (9:16)
+                  </button>
+                  <button 
+                    onClick={() => setPreviewDeviceMode('pc')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${previewDeviceMode === 'pc' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'}`}
+                  >
+                    💻 Computador (16:9)
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {currentUser ? (
+                    <div className="flex items-center gap-3">
+                      <div className="hidden sm:block text-right">
+                        <p className="text-sm font-bold text-slate-200">{currentUser.name}</p>
+                        <p className="text-xs text-indigo-400 capitalize">{currentUser.role === 'admin' ? 'Administrador BielShadow' : 'Membro'}</p>
+                      </div>
+
+                      {currentUser.role === 'admin' && (
+                        <button 
+                          onClick={() => setCurrentView('admin')}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition shadow-md ${currentView === 'admin' ? 'bg-indigo-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30'}`}
+                        >
+                          ⚙️ <span>Painel BielShadow</span>
+                        </button>
+                      )}
+
+                      <button 
+                        onClick={() => { setCurrentUser(null); setCurrentView('home'); showNotification('Sessão encerrada.'); }}
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-red-950/40 hover:text-red-400 text-slate-400 transition"
+                        title="Sair"
+                      >
+                        🚪
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setCurrentView('login')}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition"
+                    >
+                      Entrar / Admin
+                    </button>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            {currentView === 'admin' && currentUser?.role === 'admin' ? (
+              <AdminPanel 
+                wallpapers={wallpapers}
+                categories={categories}
+                pixConfig={pixConfig}
+                protectionConfig={protectionConfig}
+                layoutSettings={layoutSettings}
+                salesHistory={salesHistory}
+                paymentHistory={paymentHistory}
+                users={users}
+                onSavePix={handleSavePixConfig}
+                onSaveProtection={handleSaveProtection}
+                onSaveLayout={handleSaveLayout}
+                onAddCategory={handleAddCategory}
+                onDeleteCategory={handleDeleteCategory}
+                onAddWallpaper={handleAddWallpaper}
+                onDeleteWallpaper={handleDeleteWallpaper}
+                onBackToHome={() => setCurrentView('home')}
+                adminTab={adminTab}
+                setAdminTab={setAdminTab}
+              />
+            ) : currentView === 'login' ? (
+              <LoginScreen 
+                onLogin={(user) => {
+                  setCurrentUser(user);
+                  setCurrentView(user.role === 'admin' ? 'admin' : 'home');
+                  showNotification(`Bem-vindo, ${user.name}!`);
+                }}
+                onBack={() => setCurrentView('home')}
+              />
+            ) : currentView === 'checkout' && activeOrder ? (
+              <CheckoutScreen 
+                order={activeOrder}
+                pixConfig={pixConfig}
+                checkoutStep={checkoutStep}
+                setCheckoutStep={setCheckoutStep}
+                onSimulateWebhook={simulateWebhookApproval}
+                onBack={() => setCurrentView('home')}
+              />
+            ) : (
+              <CatalogScreen 
+                wallpapers={wallpapers}
+                categories={categories}
+                layoutSettings={layoutSettings}
+                protectionConfig={protectionConfig}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                previewDeviceMode={previewDeviceMode}
+                setPreviewDeviceMode={setPreviewDeviceMode}
+                onSelectWallpaper={(w) => setActiveWallpaper(w)}
+                currentUser={currentUser}
+                onDownload={triggerDownload}
+              />
+            )}
+
+            {activeWallpaper && currentView !== 'checkout' && currentView !== 'admin' && (
+              <WallpaperModal 
+                wallpaper={activeWallpaper}
+                protectionConfig={protectionConfig}
+                currentUser={currentUser}
+                onClose={() => setActiveWallpaper(null)}
+                onBuy={(w) => {
+                  setActiveWallpaper(null);
+                  initiateCheckout(w);
+                }}
+                onDownload={(w, fmt) => {
+                  setActiveWallpaper(null);
+                  triggerDownload(w, fmt);
+                }}
+              />
+            )}
+          </div>
+        );
+      }
+
+      function CatalogScreen({ 
+        wallpapers, categories, layoutSettings, protectionConfig, 
+        selectedCategory, setSelectedCategory, searchQuery, setSearchQuery,
+        previewDeviceMode, setPreviewDeviceMode, onSelectWallpaper, currentUser, onDownload
+      }) {
+        const filteredWallpapers = wallpapers.filter(w => {
+          const matchesCat = selectedCategory === 'all' || w.category === selectedCategory;
+          const matchesSearch = w.title.toLowerCase().includes(searchQuery.toLowerCase());
+          return matchesCat && matchesSearch;
+        });
+
+        const activeCategoryObj = categories.find(c => c.slug === selectedCategory);
+
+        return (
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {layoutSettings.showBanner && (
+              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-indigo-900 via-slate-900 to-purple-950 border border-indigo-500/20 p-8 sm:p-12 mb-10 shadow-2xl">
+                <div className="relative z-10 max-w-2xl">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-4">
+                    ✨ Coleção Oficial WALLPIX
+                  </span>
+                  <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight mb-4 leading-tight">
+                    {layoutSettings.bannerTitle}
+                  </h2>
+                  <p className="text-slate-300 text-sm sm:text-base mb-6 leading-relaxed">
+                    {layoutSettings.bannerSubtitle}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex lg:hidden items-center justify-center bg-slate-900 p-2 rounded-2xl border border-slate-800 mb-6">
+              <button 
+                onClick={() => setPreviewDeviceMode('mobile')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${previewDeviceMode === 'mobile' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}
+              >
+                📱 Celular (9:16)
+              </button>
+              <button 
+                onClick={() => setPreviewDeviceMode('pc')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${previewDeviceMode === 'pc' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}
+              >
+                💻 Computador (16:9)
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar">
+              <button 
+                onClick={() => setSelectedCategory('all')}
+                className={`px-5 py-2.5 rounded-2xl text-sm font-bold whitespace-nowrap transition-all ${selectedCategory === 'all' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+              >
+                Todos os Wallpapers
+              </button>
+              {categories.map(cat => (
+                <button 
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.slug)}
+                  className={`px-5 py-2.5 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all ${selectedCategory === cat.slug ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+
+            {filteredWallpapers.length === 0 ? (
+              <div className="bg-slate-900/50 border border-slate-800/80 rounded-3xl p-16 text-center max-w-xl mx-auto my-12">
+                <h3 className="text-xl font-bold text-white mb-2">Em breve, novos wallpapers estarão disponíveis!</h3>
+                <p className="text-slate-400 text-sm">
+                  {selectedCategory === 'all' ? 'O catálogo está pronto e aguardando novos envios.' : `A categoria "${activeCategoryObj ? activeCategoryObj.name : selectedCategory}" ainda não possui imagens.`}
+                </p>
+              </div>
+            ) : (
+              <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-${layoutSettings.columns} gap-6`}>
+                {filteredWallpapers.map(w => {
+                  const hasPurchased = currentUser && currentUser.purchases && currentUser.purchases.includes(w.id);
+                  const isFree = !w.isPremium;
+                  const aspectClass = previewDeviceMode === 'pc' ? 'aspect-video' : 'aspect-[9/16]';
+
+                  return (
+                    <div 
+                      key={w.id} 
+                      onClick={() => onSelectWallpaper(w)}
+                      className="group relative bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 hover:border-indigo-500/50 transition-all duration-300 shadow-xl cursor-pointer flex flex-col"
+                    >
+                      <div className={`relative ${aspectClass} w-full overflow-hidden bg-slate-950`}>
+                        <img src={w.url} alt={w.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
+                        {w.isPremium && !hasPurchased && (
+                          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                            <div className="transform rotate-[-30deg] font-black text-white/30 tracking-widest text-2xl uppercase">
+                              {protectionConfig.watermarkText}
+                            </div>
+                            <div className="absolute top-3 right-3 bg-amber-500/90 text-amber-950 font-bold px-3 py-1 rounded-full text-xs">
+                              🔒 Premium
+                            </div>
+                          </div>
+                        )}
+                        {isFree && (
+                          <div className="absolute top-3 right-3 bg-emerald-500/90 text-emerald-950 font-bold px-3 py-1 rounded-full text-xs">
+                            🔓 Grátis
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4 flex items-center justify-between bg-slate-900/90 border-t border-slate-800/80">
+                        <div>
+                          <h4 className="font-bold text-slate-100 text-sm truncate max-w-[180px]">{w.title}</h4>
+                          <p className="text-xs text-indigo-400 capitalize">{w.category}</p>
+                        </div>
+                        <div>
+                          {w.isPremium && !hasPurchased ? (
+                            <span className="text-sm font-black text-indigo-300">R$ {Number(w.price).toFixed(2)}</span>
+                          ) : (
+                            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg">Disponível</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </main>
+        );
+      }
+
+      function WallpaperModal({ wallpaper, protectionConfig, currentUser, onClose, onBuy, onDownload }) {
+        const hasPurchased = currentUser && currentUser.purchases && currentUser.purchases.includes(wallpaper.id);
+        const isFree = !wallpaper.isPremium;
+        const [downloadFormat, setDownloadFormat] = useState('mobile');
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full overflow-hidden shadow-2xl flex flex-col md:flex-row relative">
+              <button onClick={onClose} className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center">✕</button>
+
+              <div className="w-full md:w-1/2 bg-slate-950 flex items-center justify-center p-6 relative min-h-[400px]">
+                <div className={`relative max-h-[70vh] ${downloadFormat === 'pc' ? 'aspect-video' : 'aspect-[9/16]'} w-full overflow-hidden rounded-2xl shadow-2xl flex items-center justify-center`}>
+                  <img src={wallpaper.url} alt={wallpaper.title} className="w-full h-full object-cover" />
+                  {wallpaper.isPremium && !hasPurchased && (
+                    <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                      <div className="transform rotate-[-30deg] font-black text-white/40 tracking-widest text-3xl uppercase">
+                        {protectionConfig.watermarkText}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="w-full md:w-1/2 p-8 flex flex-col justify-between">
+                <div>
+                  <span className="px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold uppercase">
+                    {wallpaper.category}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-black text-white mt-3 mb-2">{wallpaper.title}</h2>
+                  <p className="text-slate-400 text-sm mb-6">Escolha o formato para download:</p>
+
+                  <div className="mb-6 grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => setDownloadFormat('mobile')}
+                      className={`py-3 px-4 rounded-xl text-xs font-bold border transition ${downloadFormat === 'mobile' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-400'}`}
+                    >
+                      📱 Celular (9:16)
+                    </button>
+                    <button 
+                      onClick={() => setDownloadFormat('pc')}
+                      className={`py-3 px-4 rounded-xl text-xs font-bold border transition ${downloadFormat === 'pc' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-950 border-slate-800 text-slate-400'}`}
+                    >
+                      💻 Computador (16:9)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {isFree ? (
+                    <button onClick={() => onDownload(wallpaper, downloadFormat)} className="w-full py-4 rounded-2xl bg-emerald-600 text-white font-bold flex items-center justify-center gap-2">
+                      📥 Baixar Foto Grátis
+                    </button>
+                  ) : hasPurchased ? (
+                    <button onClick={() => onDownload(wallpaper, downloadFormat)} className="w-full py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center justify-center gap-2">
+                      📥 Baixar Arquivo Original
+                    </button>
+                  ) : (
+                    <button onClick={() => onBuy(wallpaper)} className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold flex items-center justify-center gap-2">
+                      💲 Comprar por R$ {Number(wallpaper.price).toFixed(2)} via Pix
+                    </button>
+                  )}
+                  <button onClick={onClose} className="w-full py-3 rounded-2xl bg-slate-800 text-slate-300 font-semibold">Fechar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function CheckoutScreen({ order, pixConfig, checkoutStep, onSimulateWebhook, onBack }) {
+        const [copied, setCopied] = useState(false);
+        const copyPixCode = () => {
+          navigator.clipboard.writeText(order.qrCodeString);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 3000);
+        };
+
+        return (
+          <div className="max-w-3xl mx-auto px-4 py-12">
+            <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-white mb-6">⬅️ Voltar</button>
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+              <div className="text-center pb-8 border-b border-slate-800">
+                <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-300 text-xs font-bold uppercase">Pix Instantâneo</span>
+                <h2 className="text-3xl font-black text-white mt-3">Pedido #{order.id}</h2>
+                <div className="mt-4 text-4xl font-black text-indigo-400">R$ {Number(order.price).toFixed(2)}</div>
+              </div>
+
+              {checkoutStep === 'success' ? (
+                <div className="py-12 text-center space-y-4">
+                  <h3 className="text-2xl font-bold text-white">Pagamento Aprovado com Sucesso!</h3>
+                  <button onClick={onBack} className="mt-6 px-8 py-3 rounded-xl bg-indigo-600 text-white font-bold">Voltar ao Catálogo</button>
+                </div>
+              ) : (
+                <div className="py-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  <div className="flex flex-col items-center justify-center bg-slate-950 p-6 rounded-2xl border border-slate-800">
+                    <div className="w-48 h-48 bg-white p-3 rounded-xl flex items-center justify-center text-slate-950 font-bold text-center">
+                      QR CODE PIX ({pixConfig.receiverName})
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="text-xs font-bold text-slate-300 block mb-1">Pix Copia e Cola:</label>
+                      <div className="flex gap-2">
+                        <input type="text" readOnly value={order.qrCodeString} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 w-full font-mono" />
+                        <button onClick={copyPixCode} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">{copied ? 'Copiado!' : 'Copiar'}</button>
+                      </div>
+                    </div>
+                    <button onClick={onSimulateWebhook} className="w-full py-3 bg-emerald-600 text-white font-bold text-xs rounded-xl">
+                      🔄 Simular Confirmação Real do Webhook (Pix Pago)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      function LoginScreen({ onLogin, onBack }) {
+        const [email, setEmail] = useState('');
+        const [password, setPassword] = useState('');
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (email === 'BielShadow' || email === 'admin@wallpix.com') {
+            onLogin({ id: 'admin-1', name: 'BielShadow', email, role: 'admin', purchases: [] });
+          } else {
+            onLogin({ id: 'user-' + Date.now(), name: email.split('@')[0], email, role: 'user', purchases: [] });
+          }
+        };
+
+        return (
+          <div className="max-w-md mx-auto px-4 py-20">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+              <h2 className="text-2xl font-black text-white text-center mb-6">Acessar WALLPIX</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <input type="text" required placeholder="BielShadow ou e-mail" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none" />
+                <input type="password" required placeholder="Senha" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none" />
+                <button type="submit" className="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl">Entrar</button>
+              </form>
+              <div className="mt-6 text-center">
+                <button onClick={onBack} className="text-xs text-indigo-400">← Voltar</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function AdminPanel({ 
+        wallpapers, categories, pixConfig, protectionConfig, layoutSettings, 
+        salesHistory, paymentHistory, users, onSavePix, onSaveProtection, 
+        onSaveLayout, onAddCategory, onDeleteCategory, onAddWallpaper, 
+        onDeleteWallpaper, onBackToHome, adminTab, setAdminTab 
+      }) {
+        return (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex justify-between items-center mb-8 bg-slate-900 p-6 rounded-3xl border border-slate-800">
+              <h2 className="text-2xl font-black text-white">Painel Administrativo BielShadow</h2>
+              <button onClick={onBackToHome} className="px-5 py-2.5 bg-slate-800 text-slate-200 rounded-xl text-sm font-bold">Ver Site</button>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-4 mb-8">
+              {['dashboard', 'wallpapers', 'categories', 'pix', 'protection', 'layout', 'sales'].map(tab => (
+                <button key={tab} onClick={() => setAdminTab(tab)} className={`px-4 py-3 rounded-2xl text-sm font-bold capitalize transition ${adminTab === tab ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 border border-slate-800'}`}>
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8">
+              {adminTab === 'wallpapers' && <AdminWallpapers wallpapers={wallpapers} categories={categories} onAdd={onAddWallpaper} onDelete={onDeleteWallpaper} />}
+              {adminTab === 'categories' && <AdminCategories categories={categories} wallpapers={wallpapers} onAdd={onAddCategory} onDelete={onDeleteCategory} />}
+              {adminTab === 'pix' && <AdminPixConfig pixConfig={pixConfig} onSave={onSavePix} />}
+              {adminTab === 'protection' && <AdminProtection protectionConfig={protectionConfig} onSave={onSaveProtection} />}
+              {adminTab === 'layout' && <AdminLayoutEditor layoutSettings={layoutSettings} onSave={onSaveLayout} />}
+              {adminTab === 'dashboard' && <div className="text-slate-300">Painel de Métricas e Vendas Totais.</div>}
+              {adminTab === 'sales' && <div className="text-slate-300">Histórico de Transações Pix.</div>}
+            </div>
+          </div>
+        );
+      }
+
+      function AdminWallpapers({ categories, wallpapers, onAdd, onDelete }) {
+        const [title, setTitle] = useState('');
+        const [category, setCategory] = useState(categories[0]?.slug || 'carros');
+        const [displayFormat, setDisplayFormat] = useState('mobile');
+        const [isPremium, setIsPremium] = useState(false);
+        const [price, setPrice] = useState('9.90');
+        const [previewUrl, setPreviewUrl] = useState('');
+
+        const handleFileChange = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setPreviewUrl(reader.result);
+            reader.readAsDataURL(file);
+          }
+        };
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (!previewUrl) return alert('Selecione uma imagem!');
+          onAdd({
+            id: 'wall-' + Date.now(),
+            title, category, displayFormat, isPremium,
+            price: isPremium ? parseFloat(price) : 0,
+            url: previewUrl,
+            createdAt: new Date().toISOString()
+          });
+          setTitle('');
+          setPreviewUrl('');
+        };
+
+        return (
+          <div className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-4 bg-slate-950 p-6 rounded-2xl border border-slate-800">
+              <h3 className="text-lg font-black text-white mb-4">Adicionar Wallpaper</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" required placeholder="Título" value={title} onChange={(e) => setTitle(e.target.value)} className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white" />
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  {categories.map(c => <option key={c.id} value={c.slug}>{c.name}</option>)}
+                </select>
+                <select value={displayFormat} onChange={(e) => setDisplayFormat(e.target.value)} className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  <option value="mobile">Celular (9:16)</option>
+                  <option value="pc">Computador (16:9)</option>
+                </select>
+                <select value={isPremium ? 'premium' : 'free'} onChange={(e) => setIsPremium(e.target.value === 'premium')} className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white">
+                  <option value="free">Gratuito</option>
+                  <option value="premium">Premium</option>
+                </select>
+              </div>
+              <input type="file" accept="image/*" onChange={handleFileChange} className="text-xs text-slate-400" />
+              <button type="submit" className="px-6 py-3 bg-emerald-600 text-white font-bold text-xs rounded-xl">Publicar</button>
+            </form>
+          </div>
+        );
+      }
+
+      function AdminCategories({ categories, onAdd, onDelete }) {
+        const [name, setName] = useState('');
+        return (
+          <div className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); onAdd(name); setName(''); }} className="flex gap-2">
+              <input type="text" placeholder="Nome da Categoria" value={name} onChange={(e) => setName(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white" />
+              <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Adicionar</button>
+            </form>
+            <div className="grid grid-cols-3 gap-2">
+              {categories.map(c => (
+                <div key={c.id} className="bg-slate-950 p-3 rounded-xl flex justify-between items-center border border-slate-800">
+                  <span className="text-xs font-bold text-white">{c.name}</span>
+                  <button onClick={() => onDelete(c.id)} className="text-red-400 text-xs">🗑️</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      function AdminPixConfig({ pixConfig, onSave }) {
+        const [config, setConfig] = useState(pixConfig);
+        return (
+          <form onSubmit={(e) => { e.preventDefault(); onSave(config); }} className="space-y-4 max-w-lg">
+            <input type="text" value={config.pixKey} onChange={(e) => setConfig({...config, pixKey: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white" placeholder="Chave Pix" />
+            <input type="text" value={config.receiverName} onChange={(e) => setConfig({...config, receiverName: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white" placeholder="Nome do Recebedor" />
+            <button type="submit" className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Salvar Pix</button>
+          </form>
+        );
+      }
+
+      function AdminProtection({ protectionConfig, onSave }) {
+        const [config, setConfig] = useState(protectionConfig);
+        return (
+          <form onSubmit={(e) => { e.preventDefault(); onSave(config); }} className="space-y-4 max-w-lg">
+            <input type="text" value={config.watermarkText} onChange={(e) => setConfig({...config, watermarkText: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white" placeholder="Texto Marca d'água" />
+            <button type="submit" className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Salvar Proteção</button>
+          </form>
+        );
+      }
+
+      function AdminLayoutEditor({ layoutSettings, onSave }) {
+        const [settings, setSettings] = useState(layoutSettings);
+        return (
+          <form onSubmit={(e) => { e.preventDefault(); onSave(settings); }} className="space-y-4 max-w-lg">
+            <input type="text" value={settings.bannerTitle} onChange={(e) => setSettings({...settings, bannerTitle: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white" placeholder="Título do Banner" />
+            <button type="submit" className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Salvar Layout</button>
+          </form>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
